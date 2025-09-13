@@ -55,3 +55,44 @@ def grab_camera_thread_capture():
             _, buffer = cv.imencode('.jpg', frame)
             return Response(content=buffer.tobytes(), media_type="image/png")
     return None
+
+def aruco_marker_capture():
+    global camera_engine_thread
+    if camera_engine_thread:
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+        parameters = cv.aruco.DetectorParameters()
+        ret, frame = camera_engine_thread.cap.read()
+        detector = cv.aruco.ArucoDetector(aruco_dict, parameters)
+        if ret:
+            marker_corners, marker_ids, _ = detector.detectMarkers(frame)
+            outImage: cv.Mat = frame.copy()
+            cv.aruco.drawDetectedMarkers(outImage, marker_corners, marker_ids)
+            _, buffer = cv.imencode('.png', outImage)
+            return Response(content=buffer.tobytes(), media_type="image/png")
+    return None
+
+def position_correction_capture():
+    global cmaera_engine_thread
+    if camera_engine_thread:
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+        parameters = cv.aruco.DetectorParameters()
+        detector = cv.aruco.ArucoDetector(aruco_dict, parameters)
+        ret, frame = camera_engine_thread.cap.read()
+        if ret:
+            marker_corners, marker_ids, _ = detector.detectMarkers(frame)
+            if marker_ids is not None and len(marker_ids) > 0 and [1,2,3,4] in marker_ids:
+                # Get the corners of the markers
+                corners_dict = {id[0]: corner for id, corner in zip(marker_ids, marker_corners)}
+                # Assuming markers 1, 2, 3, and 4 are present
+                pts1 = np.array([corners_dict[i][0][0] for i in [1, 2, 3, 4]], dtype="float32")
+                # Define the destination points for a top-down view
+                size = 500
+                pts2 = np.array([[0, 0], [size - 1, 0], [size - 1, size - 1], [0, size - 1]], dtype="float32")
+                # Compute the perspective transform matrix
+                M = cv.getPerspectiveTransform(pts1, pts2)
+                # Apply the perspective transformation to get the corrected image
+                warped = cv.warpPerspective(frame, M, (size, size))
+                _, buffer = cv.imencode('.png', warped)
+                return Response(content=buffer.tobytes(), media_type="image/png")
+    return None
+            
