@@ -5,6 +5,9 @@ import threading
 from threading import Thread
 from fastapi.responses import Response
 
+from vision.util.autobrightness import automatic_brightness_and_contrast
+from . import softbinary as sb
+
 class cameraImageWorker(Thread):
     def __init__(self):
         super().__init__()  # Call the parent class's constructor
@@ -13,6 +16,9 @@ class cameraImageWorker(Thread):
 
     def run(self):
         self.cap = cv.VideoCapture(0)
+        self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+        self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
+
         if not self.cap.isOpened():
             print("Cannot open camera")
             exit()
@@ -71,7 +77,7 @@ def aruco_marker_capture():
             return Response(content=buffer.tobytes(), media_type="image/png")
     return None
 
-def position_correction_capture():
+def position_correction_capture(thres: int):
     global camera_engine_thread
     if camera_engine_thread:
         aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
@@ -99,19 +105,46 @@ def position_correction_capture():
                             corners_dict[3][0][3],  # bottom-left corner of marker 3
                         ], dtype="float32")
 
-                        # Destination square
-                        size = 500
+                        scale_factor = 2  # or 3, 4, etc.
+
+                        output_width = int(1280 * scale_factor)
+                        output_height = int(1280 * scale_factor)
+
+                        # Scale destination points accordingly
                         pts2 = np.array([
-                            [0, 0],
-                            [size - 1, 0],
-                            [size - 1, size - 1],
-                            [0, size - 1]
+                            [0, 0], 
+                            [output_width - 1, 0],
+                            [output_width - 1, output_height - 1],
+                            [0, output_height - 1]
                         ], dtype="float32")
 
                         # Perspective transform
                         M = cv.getPerspectiveTransform(pts1, pts2)
-                        warped = cv.warpPerspective(frame, M, (size, size))
-                        _, buffer = cv.imencode('.png', warped)
+                        warped = cv.warpPerspective(frame, M, (output_width, output_height), flags=cv.INTER_LINEAR)
+                        # equalized = cv.equalizeHist(grayscale)
+                        # 
+                        brightness_contrast, a, b = automatic_brightness_and_contrast(warped)  
+                        grayscale = cv.cvtColor(warped, cv.COLOR_BGR2GRAY)
+                        # threshold = cv.threshold(grayscale, thres, 255, cv.THRESH_BINARY)[1]
+                        #ret, otsu_thresh = cv.threshold(grayscale, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+                        #adaptive_mean_thresh = cv.adaptiveThreshold(img, 255,
+                        #                        cv.ADAPTIVE_THRESH_MEAN_C,
+                        #                        cv.THRESH_BINARY, 11, 2)
+                        #   Apply adaptive Gaussian thresholding
+                        # Apply adaptive thresholding using ADAPTIVE_THRESH_MEAN_C
+                        #thresh_mean = cv.adaptiveThreshold(grayscale, 255, cv.ADAPTIVE_THRESH_MEAN_C,cv.THRESH_BINARY, 11, 2)
+                        #thresh_gaussian = cv.adaptiveThreshold(grayscale, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+                         #               cv.THRESH_BINARY, 11, 2)
+                        
+                        #final = sb.combine_process(brightness_contrast, thresh_gaussian)
+
+                        gamma = sb.adjust_gamma(warped, 1.2)
+                        mask = sb.process_image(gamma)
+                        final = sb.combine_process(warped, mask)
+
+
+                        # Return the corrected image    
+                        _, buffer = cv.imencode('.png', final)
                         return Response(content=buffer.tobytes(), media_type="image/png")
 
                     except KeyError as e:
