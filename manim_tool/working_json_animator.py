@@ -12,6 +12,8 @@ from typing import Dict, Any, List
 from manim import *
 from util.function_parser import FunctionParser
 
+import traceback
+
 def create_working_animation_from_json(json_input: Dict[str, Any]) -> tuple[bool, str, str]:
     """
     Create working animation from JSON input
@@ -44,7 +46,10 @@ def create_working_animation_from_json(json_input: Dict[str, Any]) -> tuple[bool
         elif animation_type == "derivative":
             return _create_working_derivative(function, domain, options, animation_id)
         elif animation_type == "linear_system":
-            equations = options.get("equations", ["y = 2*x + 1", "y = -x + 4"])
+            if options:
+                equations = options.get("equations", ["y = 2*x + 1", "y = -x + 4"])
+            else:
+                equations = ["y=2*x+1","y=-x+4"]
             return _create_working_linear_system(equations, domain, animation_id)
         elif animation_type == "integral":
             return _create_working_integral(function, domain, options, animation_id)
@@ -60,6 +65,7 @@ def create_working_animation_from_json(json_input: Dict[str, Any]) -> tuple[bool
             return False, "", f"Unknown animation type: {animation_type}"
             
     except Exception as e:
+        print(traceback.format_exc())
         return False, "", str(e)
 
 def _create_working_riemann_sum(function: str, domain: List[float], options: Dict[str, Any], animation_id: str) -> tuple[bool, str, str]:
