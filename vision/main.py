@@ -1,6 +1,7 @@
 from vision.util.transformationkit.imagereworkengine import grab_camera_thread_capture
 from vision.util.transformationkit.imagereworkengine import kill_camera_thread
 from vision.util.transformationkit.imagereworkengine import init_camera_thread
+from vision.util.transformationkit.imagereworkengine import aruco_marker_capture, position_correction_capture
 from vision.util.lib.request import FiducialRequest, ImageRequest
 from typing import Union
 import base64
@@ -91,3 +92,11 @@ def kill_image_engine(background_tasks: BackgroundTasks):
 @app.get("/current-frame")
 def get_current_frame():
     return grab_camera_thread_capture()
+
+@app.get("/current-frame-aruco")
+def get_aruco_frame():
+    return aruco_marker_capture()
+
+@app.get("/current-frame-correction")
+def get_corrected_frame():
+    return position_correction_capture()
