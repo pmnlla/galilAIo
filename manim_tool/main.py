@@ -16,9 +16,16 @@ from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image
 import uvicorn
 
-from util.lib.request import AnimationRequest, AnimationResponse, FunctionParseRequest, FunctionParseResponse
+from util.lib.request import (
+    AnimationRequest,
+    AnimationResponse,
+    FunctionParseRequest,
+    FunctionParseResponse,
+    JSONAnimationRequest,
+)
 from util.function_parser import FunctionParser
 from util.manim_engine import ManimAnimationEngine
+from working_json_animator import create_working_animation_from_json
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,17 +52,44 @@ def read_root():
         "endpoints": {
             "POST /generate-animation": "Generate mathematical animation",
             "POST /parse-function": "Test function parsing",
+            "POST /generate-animation-json": "Generate animation from LLM-style JSON",
             "GET /download/{animation_id}": "Download generated animation",
             "GET /examples": "Get function examples",
             "GET /health": "Health check"
         },
         "example_request": {
-            "function_description": "x squared plus two x minus one",
-            "domain": [-5, 5],
-            "duration": 3.0,
-            "quality": "medium"
+            "type": "riemann_sum",
+            "function": "x^2 + 2*x - 1",
+            "domain": [0, 3],
+            "options": {"sum_type": "right", "num_rectangles": 12}
         }
     }
+@app.post("/generate-animation-json", response_model=AnimationResponse)
+async def generate_animation_json(request: JSONAnimationRequest):
+    """Generate an animation from LLM-style JSON (matches working JSON animator)."""
+    try:
+        req_dict = request.dict(by_alias=True)
+        success, animation_id, file_path = create_working_animation_from_json(req_dict)
+        if not success:
+            return AnimationResponse(
+                animation_id=animation_id,
+                status="error",
+                message="Failed to generate animation from JSON",
+                error=file_path,
+            )
+        return AnimationResponse(
+            animation_id=animation_id,
+            status="completed",
+            message="Animation generated successfully",
+            file_path=file_path,
+        )
+    except Exception as e:
+        return AnimationResponse(
+            animation_id="",
+            status="error",
+            message="Internal server error",
+            error=str(e),
+        )
 
 @app.post("/generate-animation", response_model=AnimationResponse)
 async def generate_animation(request: AnimationRequest, background_tasks: BackgroundTasks):

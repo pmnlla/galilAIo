@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 class AnimationRequest(BaseModel):
     """Request model for generating mathematical animations"""
@@ -33,3 +33,19 @@ class FunctionParseResponse(BaseModel):
     latex_expression: str
     success: bool
     error: Optional[str] = None
+
+
+class JSONAnimationOptions(BaseModel):
+    """Options for JSON-driven animations"""
+    sum_type: Optional[str] = Field(None, description="Riemann sum sampling: left or right")
+    num_rectangles: Optional[int] = Field(None, description="Number of Riemann rectangles")
+    point: Optional[float] = Field(None, description="Point for tangent in derivative scene")
+    equations: Optional[List[str]] = Field(None, description="Equations for linear systems (e.g., 'y = 2*x + 1', '2*x + y = 5')")
+
+
+class JSONAnimationRequest(BaseModel):
+    """Request model matching the JSON-driven animator"""
+    type: str = Field(..., description="Animation type: riemann_sum | derivative | integral | linear_system")
+    function: Optional[str] = Field(None, description="Function expression for applicable types (e.g., 'x^2', 'sin(x)')")
+    domain: List[float] = Field(..., description="Domain range [min, max] for x")
+    options: Optional[JSONAnimationOptions] = Field(None, description="Additional options per animation type")

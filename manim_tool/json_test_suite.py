@@ -133,6 +133,26 @@ def run_tests():
                 'options': {}
             }
         },
+        # Equation display
+        {
+            'name': 'Equation display (single)',
+            'json': {
+                'type': 'equation',
+                'function': r"y = x^2 + 2x - 1",
+                'domain': [0, 1],
+                'options': {}
+            }
+        },
+        {
+            'name': 'Equation display (multiple)',
+            'json': {
+                'type': 'equation_display',
+                'domain': [0, 1],
+                'options': {
+                    'equations': [r"y = 2x + 1", r"y = -x + 4", r"f(x) = e^{-x} \sin(2x)"]
+                }
+            }
+        },
     ]
 
     results = []

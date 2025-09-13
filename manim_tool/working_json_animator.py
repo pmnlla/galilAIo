@@ -48,6 +48,14 @@ def create_working_animation_from_json(json_input: Dict[str, Any]) -> tuple[bool
             return _create_working_linear_system(equations, domain, animation_id)
         elif animation_type == "integral":
             return _create_working_integral(function, domain, options, animation_id)
+        elif animation_type in ("equation", "equation_display"):
+            equations = options.get("equations") if options else None
+            # Fallback: if only a single function/equation string is provided
+            if not equations and function:
+                equations = [function]
+            if not equations:
+                return False, "", "No equations provided for equation display"
+            return _create_working_equation_display(equations, animation_id)
         else:
             return False, "", f"Unknown animation type: {animation_type}"
             
@@ -395,6 +403,43 @@ def _create_working_integral(function: str, domain: List[float], options: Dict[s
     scene.render()
     output_dir = Path("media/videos/720p30")
     output_files = list(output_dir.glob(f"integral_{safe_function}_{animation_id}*"))
+    if output_files:
+        return True, animation_id, str(output_files[0])
+    return False, animation_id, "Output file not found"
+
+def _create_working_equation_display(equations: List[str], animation_id: str) -> tuple[bool, str, str]:
+    """Display one or more equations using LaTeX (MathTex) with simple animations."""
+
+    class WorkingEquationScene(Scene):
+        def construct(self):
+            title = Text("Equations", font_size=24, color=WHITE).to_edge(UP)
+            self.play(Write(title))
+
+            items: List[Mobject] = []
+            for eq in equations:
+                try:
+                    # Allow raw LaTeX or simple strings; wrap if needed
+                    tex = MathTex(eq) if any(ch in eq for ch in ['\\', '^', '_', '{', '}', '=', '+', '-', '*']) else MathTex(eq)
+                    items.append(tex)
+                except Exception:
+                    items.append(Text(eq, font_size=24))
+
+            group = VGroup(*items).arrange(DOWN, center=False, aligned_edge=LEFT, buff=0.5)
+            group.next_to(title, DOWN, buff=0.75)
+            group.to_edge(LEFT)
+
+            for item in items:
+                self.play(Write(item))
+                self.wait(0.2)
+
+            self.wait(1.5)
+
+    config.quality = "medium_quality"
+    config.output_file = f"equation_display_{animation_id}"
+    scene = WorkingEquationScene()
+    scene.render()
+    output_dir = Path("media/videos/720p30")
+    output_files = list(output_dir.glob(f"equation_display_{animation_id}*"))
     if output_files:
         return True, animation_id, str(output_files[0])
     return False, animation_id, "Output file not found"
