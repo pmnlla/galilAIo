@@ -1,3 +1,6 @@
+from vision.util.transformationkit.imagereworkengine import grab_camera_thread_capture
+from vision.util.transformationkit.imagereworkengine import kill_camera_thread
+from vision.util.transformationkit.imagereworkengine import init_camera_thread
 from vision.util.lib.request import FiducialRequest, ImageRequest
 from typing import Union
 import base64
@@ -7,7 +10,7 @@ import hashlib
 
 from util import markergen
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 
 app = FastAPI()
 
@@ -74,3 +77,17 @@ def upload_image(request: ImageRequest):
         raise HTTPException(status_code=400, detail="Invalid base64 encoding")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
+
+@app.get("/start-image-engine")
+def start_image_engine(background_tasks: BackgroundTasks):
+    background_tasks.add_task(init_camera_thread)
+    return "True"
+
+@app.get("/kill-image-engine")
+def kill_image_engine(background_tasks: BackgroundTasks):
+    background_tasks.add_task(kill_camera_thread)
+    return "True"
+
+@app.get("/current-frame")
+def get_current_frame():
+    return grab_camera_thread_capture()
