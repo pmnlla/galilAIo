@@ -1,10 +1,13 @@
+from vision.util.lib.request import FiducialRequest, ImageRequest
 from typing import Union
 import base64
 import numpy as np
 import cv2
+import hashlib
+
+from util import markergen
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -19,8 +22,10 @@ def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
 
-class ImageRequest(BaseModel):
-    image_data: str  # base64-encoded PNG
+
+@app.get("/gen-marker")
+def gen_marker(request: FiducialRequest):
+    return markergen.marker_gen(request.position)
 
 
 @app.post("/upload-image")
@@ -46,7 +51,9 @@ def upload_image(request: ImageRequest):
         # Check if it's a PNG by trying to encode it back to PNG
         success, encoded_img = cv2.imencode('.png', image)
         if not success:
-            raise HTTPException(status_code=400, detail="Image must be in PNG format")
+            # If encoding fails, it's not a valid PNG. Send back a hash of the file for verification.
+            hash = hashlib.sha256(image_bytes).hexdigest()
+            raise HTTPException(status_code=400, detail="Invalid image data. But we've got a sha256 hash, so you can check that the image arrived properly.Said hash: " + hash)
         
         # Get image info
         height, width = image.shape[:2]
