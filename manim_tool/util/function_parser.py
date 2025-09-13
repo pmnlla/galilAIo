@@ -94,8 +94,9 @@ class FunctionParser:
         desc = re.sub(r'([a-zA-Z])(\d+)', r'\1*\2', desc)  # x2 -> x*2
         
         # Handle common mathematical constants
+        # Replace standalone constant e with E, but do not alter function names like exp
         desc = desc.replace('pi', 'pi')
-        desc = desc.replace('e', 'E')
+        desc = re.sub(r'\be\b', 'E', desc)
         
         return desc
     
