@@ -2,20 +2,66 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useVoiceWebSocket } from '~/hooks/useVoiceWebSocket';
 
 export default function Chat() {
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, stop } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
     }),
   });
   
   const [input, setInput] = useState('');
+  const [voiceConnectionStatus, setVoiceConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const isGeneratingRef = useRef(false);
+
+  // Update generation status tracking
+  isGeneratingRef.current = status !== 'ready';
+
+  const handleVoiceMessage = useCallback((text: string) => {
+    // If currently generating a response, stop it first
+    if (isGeneratingRef.current) {
+      console.log('Interrupting ongoing generation for new voice input:', text);
+      stop();
+    }
+    
+    // Send the voice transcription as a message
+    sendMessage({ text });
+  }, [sendMessage, stop]);
+
+  const handleVoiceConnectionChange = useCallback((connected: boolean) => {
+    setVoiceConnectionStatus(connected ? 'connected' : 'disconnected');
+  }, []);
+
+  // Initialize voice WebSocket connection
+  const { isConnected, connectionStatus } = useVoiceWebSocket({
+    url: 'ws://127.0.0.1:8765',
+    onMessage: handleVoiceMessage,
+    onConnectionChange: handleVoiceConnectionChange,
+  });
 
   return (
     <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
-      <h1 className="text-2xl font-bold mb-6 text-center">GalilAI Chat</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-center flex-1">GalilAI Chat</h1>
+        
+        {/* Voice Connection Status */}
+        <div className="flex items-center space-x-2">
+          <div className={`w-3 h-3 rounded-full ${
+            connectionStatus === 'connected' ? 'bg-green-500' :
+            connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+            connectionStatus === 'error' ? 'bg-red-500' :
+            'bg-gray-400'
+          }`}></div>
+          <span className="text-sm text-gray-600">
+            {connectionStatus === 'connected' ? 'Voice Connected' :
+             connectionStatus === 'connecting' ? 'Connecting...' :
+             connectionStatus === 'error' ? 'Voice Error' :
+             'Voice Disconnected'}
+          </span>
+        </div>
+      </div>
       
       {/* Chat Messages */}
       <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
