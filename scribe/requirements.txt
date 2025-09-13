@@ -1,0 +1,5 @@
+numpy
+SpeechRecognition
+openai-whisper
+torch
+websockets
