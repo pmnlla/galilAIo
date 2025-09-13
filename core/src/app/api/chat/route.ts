@@ -76,7 +76,7 @@ const getUserPaper = tool({
     inputSchema: z.object({}),
     execute: async (): Promise<{ type: 'image'; data: string } | string> => {
       try {
-        const response = await fetch('http://localhost:8000/screenshot');
+        const response = await fetch('http://localhost:8000/current-frame-correction');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -108,14 +108,21 @@ export async function POST(req: Request) {
   const result = await streamText({
     model: anthropic('claude-3-7-sonnet-20250219'),
     messages: convertToModelMessages(messages),
-    system: `You are a helpful AI tutor. Your goal is to help guide the user through a task and make the understand the actual concept.
+    system: `You are a helpful AI tutor. Your goal is to help guide the user through a task and make the understand how to break down a problem and how to approach its solution.
 
-    Don't be overly agreeable, if the user is wrong point it out. Remeber, you are a tutor, the user is a student.
+    Do not be overly agreeable, if the user is wrong point it out. Your job is to debate and argue. 
+
+    Do not provide the student with the answer.
+
+    Do provide small hints and break down concepts relating to the problem. 
+
+    Do act in good faith and use friendly language and tonality with the student.
 
     Keep the conversation friendly and engaging.
 
     Use the screenshot tool to see what the student is currently working on.
 
+    Remeber, you are a tutor, the user is a student.
 `,
 tools: {
     // getName,
