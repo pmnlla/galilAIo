@@ -14,7 +14,7 @@ export default function Chat() {
   const [input, setInput] = useState('');
 
   return (
-    <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
+    <div className="flex flex-col w-full max-w-4xl py-24 mx-auto stretch">
       <h1 className="text-2xl font-bold mb-6 text-center">GalilAI Chat</h1>
       
       {/* Chat Messages */}
@@ -23,25 +23,84 @@ export default function Chat() {
           <div key={message.id} className="whitespace-pre-wrap">
             <div className={`p-3 rounded-lg ${
               message.role === 'user' 
-                ? 'bg-blue-100 ml-auto max-w-xs' 
-                : 'bg-gray-100 mr-auto max-w-xs'
+                ? 'bg-blue-100 ml-auto max-w-md' 
+                : 'bg-gray-100 mr-auto max-w-2xl'
             }`}>
               <div className="text-xs font-semibold mb-1 capitalize">
                 {message.role}
               </div>
               <div>
-                {message.parts.map((part, index) => 
-                  part.type === 'text' ? (
-                    <span key={index}>{part.text}</span>
-                  ) : null
-                )}
+                {message.parts.map((part, index) => {
+                  if (part.type === 'text') {
+                    // Check if the text contains an animation ID and create a video element
+                    // Try multiple patterns to catch different formats
+                    const animationIdMatch = part.text.match(/Animation ID: ([a-f0-9]{8})/) || 
+                                           part.text.match(/ID: ([a-f0-9]{8})/) ||
+                                           part.text.match(/([a-f0-9]{8})\.mp4/);
+                    if (animationIdMatch) {
+                      const animationId = animationIdMatch[1];
+                      return (
+                        <div key={index}>
+                          <span>{part.text}</span>
+                          <div className="mt-2">
+                            <video 
+                              controls
+                              className="max-w-full h-auto rounded-lg"
+                              style={{ maxHeight: '400px' }}
+                            >
+                              <source 
+                                src={`http://localhost:8002/download/${animationId}`}
+                                type="video/mp4"
+                              />
+                              Your browser does not support the video tag.
+                            </video>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return <span key={index}>{part.text}</span>;
+                  } else if ((part as any).type === 'media') {
+                    const mediaPart = part as any;
+                    const isImage = mediaPart.mediaType?.startsWith('image/');
+                    const isVideo = mediaPart.mediaType?.startsWith('video/');
+                    
+                    if (isImage) {
+                      return (
+                        <div key={index} className="mt-2">
+                          <img 
+                            src={`data:${mediaPart.mediaType};base64,${mediaPart.data}`}
+                            alt="Generated content"
+                            className="max-w-full h-auto rounded-lg"
+                          />
+                        </div>
+                      );
+                    } else if (isVideo) {
+                      return (
+                        <div key={index} className="mt-2">
+                          <video 
+                            controls
+                            className="max-w-full h-auto rounded-lg"
+                            style={{ maxHeight: '400px' }}
+                          >
+                            <source 
+                              src={`data:${mediaPart.mediaType};base64,${mediaPart.data}`}
+                              type={mediaPart.mediaType}
+                            />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })}
               </div>
             </div>
           </div>
         ))}
         
         {status !== 'ready' && (
-          <div className="bg-gray-100 mr-auto max-w-xs p-3 rounded-lg">
+          <div className="bg-gray-100 mr-auto max-w-2xl p-3 rounded-lg">
             <div className="text-xs font-semibold mb-1">Assistant</div>
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>

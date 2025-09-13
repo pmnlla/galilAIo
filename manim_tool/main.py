@@ -184,10 +184,16 @@ async def parse_function(request: FunctionParseRequest):
 @app.get("/download/{animation_id}")
 async def download_animation(animation_id: str):
     """Download the generated animation MP4 file"""
-    file_path = OUTPUT_DIR / f"{animation_id}.mp4"
+    # Look in the actual output directory where Manim saves files
+    media_dir = Path("media/videos/720p30")
     
-    if not file_path.exists():
+    # Try to find the file with the animation_id in the filename
+    matching_files = list(media_dir.glob(f"*{animation_id}.mp4"))
+    
+    if not matching_files:
         raise HTTPException(status_code=404, detail="Animation not found")
+    
+    file_path = matching_files[0]  # Use the first matching file
     
     return FileResponse(
         path=file_path,

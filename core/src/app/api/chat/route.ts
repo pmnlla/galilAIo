@@ -142,8 +142,23 @@ const createManimAnimation = tool({
           return `Error creating animation: ${result.message}`;
         }
 
-        // For now, return the animation ID and status
-        // In a full implementation, you might want to serve the video file
+        // Try to fetch the video file and convert to base64 for inline display
+        try {
+          const videoResponse = await fetch(`http://localhost:8002/download/${result.animation_id}`);
+          if (videoResponse.ok) {
+            const videoBuffer = await videoResponse.arrayBuffer();
+            const videoBase64 = Buffer.from(videoBuffer).toString('base64');
+            return {
+              type: 'video',
+              data: videoBase64,
+              animationId: result.animation_id
+            };
+          }
+        } catch (videoError) {
+          console.log('Could not fetch video file, returning download link instead');
+        }
+
+        // Fallback: return download link if video fetch fails
         return {
           type: 'video',
           data: `Animation created successfully. ID: ${result.animation_id}`,
@@ -160,7 +175,9 @@ const createManimAnimation = tool({
         value:
           typeof result === 'string'
             ? [{ type: 'text', text: result }]
-            : [{ type: 'text', text: `🎬 Mathematical Animation Created!\n\n${result.data}\n\nYou can view the animation by downloading it from: http://localhost:8002/download/${result.animationId}` }],
+            : result.data && result.data.startsWith('Animation created successfully')
+              ? [{ type: 'text', text: `🎬 Mathematical Animation Created!\n\n${result.data}\n\nYou can view the animation by downloading it from: http://localhost:8002/download/${result.animationId}` }]
+              : [{ type: 'text', text: `🎬 Mathematical Animation Created!\n\nAnimation ID: ${result.animationId}\n\nYou can view the animation by downloading it from: http://localhost:8002/download/${result.animationId}` }],
       };
     },
   });
