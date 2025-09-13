@@ -102,24 +102,100 @@ const getUserPaper = tool({
     },
   });
 
+const createManimAnimation = tool({
+    description: 'Create a mathematical animation using Manim. Use this when the user asks for graphs, visualizations, or mathematical concepts that can be animated.',
+    inputSchema: z.object({
+      type: z.enum(['riemann_sum', 'derivative', 'integral', 'linear_system', 'equation_display']).describe('Type of mathematical animation to create'),
+      function: z.string().describe('Mathematical function or equation to visualize (e.g., "x^2", "sin(x)", "2*x + 1")'),
+      domain: z.array(z.number()).length(2).describe('Domain range [min, max] for the function'),
+      options: z.object({
+        sum_type: z.enum(['left', 'right']).optional().describe('For Riemann sums: left or right rectangles'),
+        num_rectangles: z.number().optional().describe('Number of rectangles for Riemann sum'),
+        point: z.number().optional().describe('Point for derivative tangent line'),
+        equations: z.array(z.string()).optional().describe('Multiple equations for linear systems or equation display')
+      }).optional().describe('Additional options for the animation')
+    }),
+    execute: async ({ type, function: func, domain, options = {} }): Promise<{ type: 'video'; data: string; animationId: string } | string> => {
+      try {
+        const requestBody = {
+          type,
+          function: func,
+          domain,
+          options
+        };
+
+        const response = await fetch('http://localhost:8002/generate-animation-json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.status === 'error') {
+          return `Error creating animation: ${result.message}`;
+        }
+
+        // For now, return the animation ID and status
+        // In a full implementation, you might want to serve the video file
+        return {
+          type: 'video',
+          data: `Animation created successfully. ID: ${result.animation_id}`,
+          animationId: result.animation_id
+        };
+      } catch (error) {
+        console.error('Error creating Manim animation:', error);
+        return 'Error creating animation. Make sure the Manim service is running at http://localhost:8002';
+      }
+    },
+    toModelOutput(result) {
+      return {
+        type: 'content',
+        value:
+          typeof result === 'string'
+            ? [{ type: 'text', text: result }]
+            : [{ type: 'text', text: `🎬 Mathematical Animation Created!\n\n${result.data}\n\nYou can view the animation by downloading it from: http://localhost:8002/download/${result.animationId}` }],
+      };
+    },
+  });
+
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
   const result = await streamText({
     model: anthropic('claude-3-7-sonnet-20250219'),
     messages: convertToModelMessages(messages),
-    system: `You are a helpful AI tutor. Your goal is to help guide the user through a task and make the understand the actual concept.
+    system: `You are a helpful AI tutor specializing in mathematics. Your goal is to help guide the user through mathematical concepts and make them understand the actual concepts.
 
-    Don't be overly agreeable, if the user is wrong point it out. Remeber, you are a tutor, the user is a student.
+    Don't be overly agreeable, if the user is wrong point it out. Remember, you are a tutor, the user is a student.
 
     Keep the conversation friendly and engaging.
 
     Use the screenshot tool to see what the student is currently working on.
 
+    IMPORTANT: When the user asks about mathematical concepts that can be visualized (functions, derivatives, integrals, Riemann sums, linear systems, etc.), ALWAYS use the createManimAnimation tool to generate a visual animation. This will help the student better understand the mathematical concepts through visual learning.
+
+    Examples of when to use Manim animations:
+    - Graphing functions (x^2, sin(x), etc.)
+    - Showing derivatives with tangent lines
+    - Visualizing integrals and area under curves
+    - Demonstrating Riemann sums
+    - Solving systems of linear equations
+    - Displaying mathematical equations
+
+    Always provide both the mathematical explanation AND create a visual animation to reinforce the learning.
+
 `,
 tools: {
     // getName,
     getCurrentImage: getUserPaper,
+    createManimAnimation: createManimAnimation,
   },
 
     toolChoice: 'auto', // Enable automatic tool selection
