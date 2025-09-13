@@ -24,11 +24,6 @@ class cameraImageWorker(Thread):
             if not ret:
                 print("Can't receive frame (stream end?). Exiting ...")
                 break
-            # Our operations on the frame come here
-            gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-            # Display the resulting frame
-            cv.imshow('frame', gray)
-            cv.imshow("frame2", frame)
 
     # When everything done, release the capture
         self.cap.release()
@@ -55,4 +50,8 @@ def kill_camera_thread():
 def grab_camera_thread_capture():
     global camera_engine_thread
     if camera_engine_thread:
-        return Response(content=cv.imencode(".png",(camera_engine_thread.cap.read()[1])), media_type="image/png")
+        ret, frame = camera_engine_thread.cap.read()
+        if ret:
+            _, buffer = cv.imencode('.jpg', frame)
+            return Response(content=buffer.tobytes(), media_type="image/png")
+    return None
