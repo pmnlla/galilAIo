@@ -21,12 +21,25 @@ def check_deps(args):
     except Exception as e:
         print("uv is not installed. Please install uv from https://astral.sh. It is mandatory for running galilaio-visiond.")
         deps_present = False
+    return deps_present
 
 def gallilaio_init(args):
     print("Initializing Galilaio...")
     # Add initialization code here
-    check_deps(args)
+    if not check_deps(args):
+        print("Please install the missing dependencies and try again.")
+        exit(1)
     
+    os.chdir('core')
+    if not args.npm:
+        subprocess.run(['bun', 'i'], check=True)
+    else:
+        subprocess.run(['npm', 'i'], check=True)
+    
+    os.chdir('../vision')
+    subprocess.run(['uv', 'sync'], check=True)
+    
+    print("Initialization complete. Please configure your .env file in the core directory")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Galilaio utility script")
