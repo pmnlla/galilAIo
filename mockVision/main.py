@@ -25,27 +25,13 @@ async def get_screenshot():
     Capture a screenshot of the scrcpy window and return it as a PNG.
     """
     try:
-        # Find the scrcpy window
-        window = None
-        try:
-            window = pyautogui.getWindowsWithTitle(WINDOW_TITLE)[0]
-        except IndexError:
-            logger.error(f"Could not find window with title: {WINDOW_TITLE}")
-            raise HTTPException(
-                status_code=404,
-                detail=f"Could not find window with title: {WINDOW_TITLE}"
-            )
+        # Take screenshot of the entire screen
+        screenshot = pyautogui.screenshot()
         
-        # Activate the window
-        window.activate()
-        time.sleep(0.5)  # Give window time to come to foreground
-        
-        # Get window dimensions
-        left, top, width, height = window.left, window.top, window.width, window.height
-        
-        # Take screenshot of the window
-        screenshot = pyautogui.screenshot(region=(left, top, width, height))
-        
+        # Verify the screenshot is not empty
+        if not screenshot or screenshot.size[0] == 0 or screenshot.size[1] == 0:
+            raise Exception("Screenshot capture resulted in an empty image")
+    
         # Convert to OpenCV format
         frame = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
         
@@ -66,7 +52,7 @@ async def get_screenshot():
 if __name__ == "__main__":
     # Run the server
     uvicorn.run(
-        "screenshot_server:app",
+        "main:app",
         host="0.0.0.0",
         port=8000,
         reload=True
