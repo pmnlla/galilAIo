@@ -71,20 +71,24 @@ const result = await generateText({
 
 // always return "C:\Users\aaron\Pictures\Screenshots\test.png"
   
-const getCurrentImage = tool({
+const getUserPaper = tool({
     description: 'Get the current image from the camera',
     inputSchema: z.object({}),
     execute: async (): Promise<{ type: 'image'; data: string } | string> => {
-      const imagePath = "C:\\Users\\aaron\\Pictures\\Screenshots\\test.png";
       try {
-        const imageBuffer = fs.readFileSync(imagePath);
+        const response = await fetch('http://localhost:8000/screenshot');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
         return {
           type: 'image',
-          data: imageBuffer.toString('base64'),
+          data: buffer.toString('base64'),
         };
       } catch (error) {
-        console.error('Error reading image file:', error);
-        return 'Error reading image file.';
+        console.error('Error fetching screenshot:', error);
+        return 'Error fetching screenshot. Make sure the screenshot server is running at http://localhost:8000';
       }
     },
     toModelOutput(result) {
@@ -104,19 +108,18 @@ export async function POST(req: Request) {
   const result = await streamText({
     model: anthropic('claude-3-7-sonnet-20250219'),
     messages: convertToModelMessages(messages),
-    system: `You are a helpful AI assistant. You can help with various tasks including:
-- Answering questions
-- Writing and editing text
-- Coding assistance
-- Analysis and research
-- Creative tasks
+    system: `You are a helpful AI tutor. Your goal is to help guide the user through a task and make the understand the actual concept.
 
-Be concise, helpful, and accurate in your responses.
+    Don't be overly agreeable, if the user is wrong point it out. Remeber, you are a tutor, the user is a student.
 
-When you need to get someone's name, use the getName tool with their ID or description.`,
+    Keep the conversation friendly and engaging.
+
+    Use the screenshot tool to see what the student is currently working on.
+
+`,
 tools: {
-    getName,
-    getCurrentImage,
+    // getName,
+    getCurrentImage: getUserPaper,
   },
 
     toolChoice: 'auto', // Enable automatic tool selection
