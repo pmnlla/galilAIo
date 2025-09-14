@@ -133,6 +133,7 @@ export async function POST(req: Request) {
 
     toolChoice: 'auto', // Enable automatic tool selection
     stopWhen: stepCountIs(3), // Enable multi-step tool execution (up to 3 steps)
+    abortSignal: req.signal, // Forward abort signal for proper stop functionality
   });
 
   // If TTS is enabled, create a transform stream to intercept text chunks
@@ -154,6 +155,36 @@ export async function POST(req: Request) {
     let processingQueue = false;
     let ffplayProc: ChildProcessWithoutNullStreams | undefined;
     let ffplayClosePromise: Promise<void> | undefined;
+
+    // Stop everything immediately (used for user interrupt / abort)
+    async function stopTTS(reason: string) {
+      try {
+        console.log('TTS stop:', reason);
+        // Clear any queued items and stop processing
+        ttsQueue.length = 0;
+        processingQueue = false;
+        // End ffplay stdin to stop audio
+        if (ffplayProc?.stdin && !ffplayProc.stdin.destroyed) {
+          ffplayProc.stdin.end();
+        }
+        // Await process exit if available
+        if (ffplayClosePromise) {
+          await ffplayClosePromise.catch(() => {});
+        }
+      } finally {
+        ffplayProc = undefined;
+        ffplayClosePromise = undefined;
+      }
+    }
+
+    // If the client cancels the HTTP request (e.g., user presses stop), abort TTS too
+    try {
+      // Next.js Request implements the Fetch API and provides a signal
+      const abortSignal: AbortSignal | undefined = (req as any)?.signal;
+      abortSignal?.addEventListener('abort', () => {
+        stopTTS('request aborted by client').catch(err => console.error('TTS stop error:', err));
+      });
+    } catch {}
 
     async function startFfplay(): Promise<void> {
       if (ffplayProc) return;
@@ -281,10 +312,12 @@ export async function POST(req: Request) {
           // Handle [DONE]
           if (lines.some(l => l.includes('[DONE]'))) {
             if (sentenceBuffer.trim()) {
-              console.log('Sending final text to TTS (DONE):', sentenceBuffer.trim().substring(0, 50) + '...');
-              sendToElevenLabs(sentenceBuffer.trim(), safeApiKey, safeVoiceId, safeModel).catch(console.error);
+              console.log('Queueing final text to TTS (DONE):', sentenceBuffer.trim().substring(0, 50) + '...');
+              enqueueTTS(sentenceBuffer.trim());
               sentenceBuffer = '';
             }
+            // Signal end of merged stream
+            enqueueEnd();
             continue;
           }
 
