@@ -2,7 +2,7 @@ from vision.util.transformationkit.imagereworkengine import grab_camera_thread_c
 from vision.util.transformationkit.imagereworkengine import kill_camera_thread
 from vision.util.transformationkit.imagereworkengine import init_camera_thread
 from vision.util.transformationkit.imagereworkengine import aruco_marker_capture, position_correction_capture
-from vision.util.lib.request import FiducialRequest, ImageRequest, CorrectionRequest
+from vision.util.rlib.request import FiducialRequest, ImageRequest, CorrectionRequest
 from typing import Union
 import base64
 import numpy as np
@@ -98,5 +98,5 @@ def get_aruco_frame():
     return aruco_marker_capture()
 
 @app.get("/current-frame-correction")
-def get_corrected_frame(request: CorrectionRequest):
-    return position_correction_capture(request.threshold)
+def get_corrected_frame():
+    return position_correction_capture(120)

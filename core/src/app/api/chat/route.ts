@@ -135,7 +135,7 @@ export async function POST(req: Request) {
     Remeber, you are a tutor, the user is a student.
 `,
     tools: {
-      getCurrentImage: getUserPaper,
+      getUserPaper,
     },
 
     toolChoice: 'auto', // Enable automatic tool selection
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     const safeVoiceId = voiceId || '21m00Tcm4TlvDq8ikWAM';
     const safeModel = model || 'eleven_turbo_v2_5';
     // Narrowed by the if-guard above, safe to assert
-    const safeApiKey = elevenLabsApiKey!;
+    const safeApiKey = elevenLabsApiKey;
 
     // Single ffplay process per response; merge sentence audio chunks
     type QueueItem = { type: 'text'; value: string } | { type: 'end' };
