@@ -28,7 +28,7 @@ def main():
                         help="Don't use the english model.")
     parser.add_argument("--energy_threshold", default=1000,
                         help="Energy level for mic to detect.", type=int)
-    parser.add_argument("--record_timeout", default=5,
+    parser.add_argument("--record_timeout", default=4,
                         help="How real time the recording is in seconds.", type=float)
     parser.add_argument("--phrase_timeout", default=1,
                         help="How much empty space between recordings before we "
