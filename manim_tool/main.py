@@ -230,6 +230,7 @@ async def health_check():
 def sort_factor(file):
     return os.stat(file).st_mtime
 
+
 @app.options("/latest")
 async def handle_options():
     """Handle CORS preflight requests for /latest endpoint"""

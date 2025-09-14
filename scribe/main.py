@@ -9,8 +9,10 @@ import torch
 import asyncio
 import websockets
 import json
+import subprocess
+import psutil
 from websockets.server import WebSocketServerProtocol
-from typing import Set
+from typing import Set, Optional
 
 from datetime import datetime, timedelta
 from queue import Queue
@@ -28,7 +30,7 @@ def main():
                         help="Don't use the english model.")
     parser.add_argument("--energy_threshold", default=1000,
                         help="Energy level for mic to detect.", type=int)
-    parser.add_argument("--record_timeout", default=5,
+    parser.add_argument("--record_timeout", default=4,
                         help="How real time the recording is in seconds.", type=float)
     parser.add_argument("--phrase_timeout", default=1,
                         help="How much empty space between recordings before we "
@@ -39,6 +41,8 @@ def main():
                         help="WebSocket port to serve transcriptions on.", type=int)
     parser.add_argument("--enable_websocket", action='store_true',
                         help="Enable WebSocket server for broadcasting transcriptions.")
+    parser.add_argument("--kill_ffplay", action='store_true',
+                        help="Kill ffplay processes when speech is detected.")
     if 'linux' in platform:
         parser.add_argument("--default_microphone", default='pulse',
                             help="Default microphone name for SpeechRecognition. "
@@ -98,6 +102,25 @@ def main():
     # WebSocket server setup
     connected_clients: Set[WebSocketServerProtocol] = set()
     websocket_server = None
+    
+    # ffplay process management
+    def kill_ffplay_processes():
+        """Kill all running ffplay processes"""
+        print("Killing ffplay processes...")
+        try:
+            killed_count = 0
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    if proc.info['name'] and 'ffplay' in proc.info['name'].lower():
+                        proc.kill()
+                        killed_count += 1
+                        print(f"Killed ffplay process (PID: {proc.info['pid']})")
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            if killed_count > 0:
+                print(f"Total ffplay processes killed: {killed_count}")
+        except Exception as e:
+            print(f"Error killing ffplay processes: {e}")
     
     async def handle_client(websocket: WebSocketServerProtocol, path: str):
         """Handle new WebSocket client connections"""
@@ -182,6 +205,10 @@ def main():
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
             if not data_queue.empty():
+                # Kill ffplay when speech is detected
+                if args.kill_ffplay:
+                    kill_ffplay_processes()
+                
                 phrase_complete = False
                 # If enough time has passed between recordings, consider the phrase complete.
                 # Clear the current working audio buffer to start over with the new data.
@@ -209,8 +236,7 @@ def main():
                     transcription.append(text)
                     # Broadcast to WebSocket clients only when phrase is complete AND has meaningful content
                     # Filter out very short phrases that are likely incomplete
-                    if (args.enable_websocket and text.strip() and connected_clients and 
-                        len(text.strip()) > 3 and len(text.strip().split()) > 1):
+                    if (args.enable_websocket and text.strip() and connected_clients):
                         try:
                             # Run the async broadcast in the event loop
                             asyncio.run_coroutine_threadsafe(

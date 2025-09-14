@@ -1,4 +1,4 @@
-// app/video-player/page.tsx
+
 "use client";
 
 import useSWR from "swr";

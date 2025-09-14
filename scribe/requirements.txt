@@ -3,3 +3,4 @@ SpeechRecognition
 openai-whisper
 torch
 websockets
+psutil
