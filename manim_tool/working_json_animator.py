@@ -265,8 +265,10 @@ def _create_working_linear_system(equations: List[str], domain: List[float], ani
                             lines.append((line, equation, color))
                         else:
                             # Implicit form: ax + by = c or ax + by + c = 0
+                            # pyrefly: ignore  # unsupported-operation
                             expr = sp.sympify(left) - sp.sympify(right)
                             try:
+                                # pyrefly: ignore  # index-error
                                 y_expr = sp.solve(expr, y_sym)[0]
                                 func = sp.lambdify(x_sym, y_expr, modules=['numpy', 'math'])
                                 color = colors[i % len(colors)]
@@ -312,7 +314,9 @@ def _create_working_linear_system(equations: List[str], domain: List[float], ani
                 try:
                     sol = sp.solve((eq_exprs[0], eq_exprs[1]), (x_sym, y_sym), dict=True)
                     if sol:
+                        # pyrefly: ignore  # index-error, bad-argument-type
                         sx = float(sol[0][x_sym])
+                        # pyrefly: ignore  # index-error, bad-argument-type
                         sy = float(sol[0][y_sym])
                         dot = Dot(ax.c2p(sx, sy), color=YELLOW)
                         self.play(Create(dot))
@@ -381,6 +385,7 @@ def _create_working_integral(function: str, domain: List[float], options: Dict[s
 
             # Plot curve and area
             curve = ax.plot(lambda xv: func(xv), color=BLUE, stroke_width=3)
+            # pyrefly: ignore  # bad-argument-type
             area = ax.get_area(curve, x_range=domain, color=GREEN, opacity=0.5)
 
             # Compute definite integral
@@ -430,11 +435,13 @@ def _create_working_equation_display(equations: List[str], animation_id: str) ->
                 except Exception:
                     items.append(Text(eq, font_size=24))
 
+            # pyrefly: ignore  # bad-argument-type
             group = VGroup(*items).arrange(DOWN, center=False, aligned_edge=LEFT, buff=0.5)
             group.next_to(title, DOWN, buff=0.75)
             group.to_edge(LEFT)
 
             for item in items:
+                # pyrefly: ignore  # bad-argument-type
                 self.play(Write(item))
                 self.wait(0.2)
 
