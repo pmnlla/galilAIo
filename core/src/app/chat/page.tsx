@@ -120,6 +120,15 @@ export default function Chat() {
         >
           Send
         </button>
+        {status !== 'ready' && (
+          <button
+            type="button"
+            onClick={stop}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+          >
+            Stop
+          </button>
+        )}
       </form>
     </div>
   );

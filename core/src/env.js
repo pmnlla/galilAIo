@@ -11,6 +11,11 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    ANTHROPIC_API_KEY: z.string(),
+    ELEVENLABS_API_KEY: z.string().optional(),
+    ELEVENLABS_VOICE_ID: z.string().default("21m00Tcm4TlvDq8ikWAM"),
+    ELEVENLABS_MODEL: z.string().default("eleven_turbo_v2_5"),
+    TTS_ENABLED: z.string().transform((val) => val === "true").default(false),
   },
 
   /**
@@ -29,6 +34,11 @@ export const env = createEnv({
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
+    ELEVENLABS_VOICE_ID: process.env.ELEVENLABS_VOICE_ID,
+    ELEVENLABS_MODEL: process.env.ELEVENLABS_MODEL,
+    TTS_ENABLED: process.env.TTS_ENABLED,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
