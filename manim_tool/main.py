@@ -1,3 +1,5 @@
+from starlette.responses import StreamingResponse
+from fastapi.openapi.models import Response
 """
 Manim Animation Tool - Main FastAPI Application
 Generates mathematical animations from natural language descriptions
@@ -34,6 +36,8 @@ app = FastAPI(
     description="Generate mathematical animations from natural language descriptions using Manim",
     version="1.0.0"
 )
+
+
 
 # Initialize components
 function_parser = FunctionParser()
@@ -226,16 +230,71 @@ async def health_check():
 def sort_factor(file):
     return os.stat(file).st_mtime
 
+@app.options("/latest")
+async def handle_options():
+    """Handle CORS preflight requests for /latest endpoint"""
+    response = JSONResponse({"message": "CORS preflight check passed"}, status_code=200)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Max-Age"] = "600"  # Cache for 10 minutes
+    return response
+
 @app.get("/latest")
 async def fetch_latest_video():
-    mypath = "./media/videos/*"
-    onlyfiles = glob.glob(mypath)
-    if onlyfiles:
+    try:
+        mypath = "./media/videos/720p30/*.mp4"
+        onlyfiles = glob.glob(mypath)
+        
+        if not onlyfiles:
+            return JSONResponse({"error": "No video files found"}, status_code=404)
+            
+        # Sort by modification time, newest first
         onlyfiles.sort(key=sort_factor)
-        video_url = f"/videos/{os.path.basename(onlyfiles[-1])}"
-        return JSONResponse({"url": video_url})
-    else:
-        return JSONResponse({"error": "No files found"}, status_code=404)
+        latest_file = onlyfiles[len(onlyfiles) - 1]
+        
+        # Verify the file exists and is readable
+        if not os.path.isfile(latest_file):
+            return JSONResponse({"error": "Video file not found"}, status_code=404)
+            
+        # Get file stats for headers
+        file_size = os.path.getsize(latest_file)
+        last_modified = os.path.getmtime(latest_file)
+        
+        # Create a file-like object to stream the file
+        file_like = open(latest_file, mode="rb")
+        
+        # Create a streaming response with appropriate headers
+        response = StreamingResponse(
+            file_like,
+            media_type="video/mp4",
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(file_size),
+                "Content-Type": "video/mp4",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+                "Last-Modified": time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(last_modified))
+            }
+        )
+        
+        # Add CORS headers
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Expose-Headers"] = "Content-Length, Last-Modified"
+        
+        return response
+        
+    except Exception as e:
+        print(f"Error in /latest endpoint: {str(e)}")
+        response = JSONResponse(
+            {"error": f"Internal server error: {str(e)}"}, 
+            status_code=500
+        )
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
 
 async def _cleanup_old_files():
     """Clean up animation files older than 1 hour"""

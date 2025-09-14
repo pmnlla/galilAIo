@@ -1,7 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/2016333726_744087864_223132457.mp4'
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/543634251_4289678997_2108796768.mp4'
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/543634251_1582047252_165189835.mp4'
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/543634251_3522204333_3883772024.mp4'
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/543634251_2352965611_2292920277.mp4'
-file 'file:/home/puppy/galilAIo/manim_tool/media/videos/720p30/partial_movie_files/WorkingIntegralScene/543634251_2408024828_520194883.mp4'
