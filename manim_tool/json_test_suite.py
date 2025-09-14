@@ -160,6 +160,7 @@ def run_tests():
     for t in tests:
         name = t['name']
         print(f"\n▶ {name}")
+        # pyrefly: ignore  # bad-argument-type
         success, anim_id, file_path = create_working_animation_from_json(t['json'])
         print('  success:', success)
         print('  id     :', anim_id)

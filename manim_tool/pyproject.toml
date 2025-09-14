@@ -16,6 +16,15 @@ dependencies = [
     "aiofiles>=23.0.0",
     "requests>=2.31.0",
     "pillow>=10.0.0",
+    "pyrefly>=0.32.0",
+]
+
+[tool.pyrefly]
+project-includes = ["**/*"]
+project-excludes = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/*venv/**/*",
 ]
 
 [build-system]

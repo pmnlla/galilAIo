@@ -201,6 +201,7 @@ class FunctionAnimationScene(Scene):
             # Function equation
             if self.latex_expression:
                 equation = MathTex(f"f(x) = {self.latex_expression}", font_size=36)
+                # pyrefly: ignore  # unknown-name
                 equation.set_color(CYAN)
                 equation.to_corner(UL, buff=1)
                 labels.add(equation)
@@ -224,6 +225,7 @@ class FunctionAnimationScene(Scene):
             self.play(Write(labels), run_time=1)
         
         # 3. Animate function drawing
+        # pyrefly: ignore  # unsupported-operation
         self.play(Create(graph), run_time=self.duration - 2)
         
         # 4. Hold final frame

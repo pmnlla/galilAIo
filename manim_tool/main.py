@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image
 import uvicorn
+import glob
 
 from util.lib.request import (
     AnimationRequest,
@@ -221,6 +222,20 @@ async def health_check():
         "output_directory": str(OUTPUT_DIR),
         "total_animations": len(list(OUTPUT_DIR.glob("*.mp4")))
     }
+
+def sort_factor(file):
+    return os.stat(file).st_mtime
+
+@app.get("/latest")
+async def fetch_latest_video():
+    mypath = "./media/videos/*"
+    onlyfiles = glob.glob(mypath)
+    if onlyfiles:
+        onlyfiles.sort(key=sort_factor)
+        video_url = f"/videos/{os.path.basename(onlyfiles[-1])}"
+        return JSONResponse({"url": video_url})
+    else:
+        return JSONResponse({"error": "No files found"}, status_code=404)
 
 async def _cleanup_old_files():
     """Clean up animation files older than 1 hour"""
