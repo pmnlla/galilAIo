@@ -1,32 +1,76 @@
 "use client";
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function LatestVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Simple function to update the video source
-  const updateVideo = () => {
-    if (!videoRef.current) return;
+  const updateVideo = async () => {
+    if (!videoRef.current || isLoading) return;
+    
+    const video = videoRef.current;
     
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
     const videoUrl = `http://localhost:8002/latest?t=${timestamp}`;
     
-    // Store the current source to revoke it later
-    const previousSrc = videoRef.current.src;
+    // Check if the source has actually changed (ignoring timestamp)
+    const currentSrcWithoutTimestamp = video.src?.split('?t=')[0];
+    const newSrcWithoutTimestamp = videoUrl.split('?t=')[0];
     
-    // Set the new source
-    videoRef.current.src = videoUrl;
-    
-    // Revoke the old blob URL to free memory
-    if (previousSrc) {
-      URL.revokeObjectURL(previousSrc);
+    if (currentSrcWithoutTimestamp === newSrcWithoutTimestamp && video.src) {
+      // Source hasn't changed, no need to reload
+      return;
     }
     
-    // Try to play the video
-    videoRef.current.play().catch(e => {
-      console.error('Error playing video:', e);
-    });
+    setIsLoading(true);
+    
+    try {
+      // Pause current video and reset
+      video.pause();
+      video.currentTime = 0;
+      
+      // Store the current source to revoke it later
+      const previousSrc = video.src;
+      
+      // Set the new source
+      video.src = videoUrl;
+      
+      // Revoke the old blob URL to free memory (only if it's a blob URL)
+      if (previousSrc && previousSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(previousSrc);
+      }
+      
+      // Wait for the video to be ready before playing
+      await new Promise<void>((resolve, reject) => {
+        const onCanPlay = () => {
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
+          resolve();
+        };
+        
+        const onError = (e: Event) => {
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
+          reject(new Error('Video failed to load'));
+        };
+        
+        video.addEventListener('canplay', onCanPlay);
+        video.addEventListener('error', onError);
+        
+        // Load the video
+        video.load();
+      });
+      
+      // Now try to play the video
+      await video.play();
+      
+    } catch (error) {
+      console.error('Error updating video:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Initial load and set up polling
@@ -40,8 +84,8 @@ export default function LatestVideo() {
     // Clean up on unmount
     return () => {
       clearInterval(intervalId);
-      // Clean up the video source
-      if (videoRef.current?.src) {
+      // Clean up the video source (only if it's a blob URL)
+      if (videoRef.current?.src && videoRef.current.src.startsWith('blob:')) {
         URL.revokeObjectURL(videoRef.current.src);
       }
     };
@@ -62,6 +106,18 @@ export default function LatestVideo() {
       justifyContent: 'center',
       alignItems: 'center'
     }}>
+      {isLoading && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          color: 'white',
+          fontSize: '14px',
+          zIndex: 10
+        }}>
+          Loading...
+        </div>
+      )}
       <video 
         ref={videoRef}
         width="1280"
@@ -77,8 +133,13 @@ export default function LatestVideo() {
         }}
         onError={(e) => {
           console.error('Video error:', e);
-          // Try to reload the video on error
-          setTimeout(updateVideo, 1000);
+          setIsLoading(false);
+          // Try to reload the video on error after a delay
+          setTimeout(() => {
+            if (!isLoading) {
+              updateVideo();
+            }
+          }, 2000);
         }}
       >
         Your browser does not support the video tag.

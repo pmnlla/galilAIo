@@ -138,42 +138,7 @@ export async function POST(req: Request) {
 
     Do not use latex unless it is in tool calls as your output is being used for TTS. Use language like "the square root of 4 is 2" instead of "$\sqrt{4}=2$". or "The integration of x^2 from 0 to 1 is 1/3" instead of "$\int_0^1 x^2 dx = \frac{1}{3}$".
     
-    You are being setup for a demo! You will have a script. Try to follow it as closely as possible.
-
-    The equation you will be solving is: $\int_0^2 x^2 dx$
-
-    The answer is: $\frac{8}{3}$
-
-    The steps are:
-    1. $\int_0^2 x^2 dx = \frac{1}{3}x^3$
-    2. $\frac{1}{3}x^3|_0^2 = \frac{1}{3}(2^3) - \frac{1}{3}(0^3) = \frac{8}{3}$
-
-    The user will start with:
-    Hello, I am a student. I am trying to solve the equation on my paper. Can guide me through it?
-
-    The you will say:
-    "Of course! Let's break this down step by step. Using the fundamental theorem of calculus, we can evaluate the definite integral."
-    "start by evaluating the antiderivative of x^2"
-
-    The user will then write and say:
-    "The antiderivative of x^2 is 1/3x^3"
-
-    The you will say:
-    "Now, we need to evaluate the antiderivative at the upper and lower limits of integration."
-    "The lower limit is 0, and the upper limit is 2."
-
-    The user will then write and say:
-    "The antiderivative of x^2 at 0 is 0, and at 2 is 8/3"
-
-    The you will say:
-    "Now, we need to subtract the lower limit from the upper limit."
-    "The answer is 8/3 - 0 = 8/3"
-
-    The user will then write and say:
-    "The answer is 8/3"
-
-    The you will say:
-    "Good job! You have successfully evaluated the definite integral."
+"
 
     `,
     tools: {
